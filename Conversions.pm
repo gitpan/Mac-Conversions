@@ -3,9 +3,9 @@
 package Mac::Conversions;
 require Exporter;
 @ISA = qw(Exporter);
-@EXPORT_OK = qw(binhex debinhex macbinary demacbinary hex2macb macb2hex);
+@EXPORT_OK = qw(binhex debinhex macbinary demacbinary hex2macb macb2hex is_macbinary);
 
-$VERSION = "1.02";
+$VERSION = "1.03";
 sub Version { $VERSION; }
 
 use strict;
@@ -589,6 +589,59 @@ sub macb2hex {
     }
 }
 
+sub is_macbinary {
+#
+#  Use a crude heuristic to decide whether or not a file is MacBinary.  The
+#  first byte of any MacBinary file must be zero.  The second has to be
+#  <= 63 according to the MacBinary II standard.  The 122nd and 123rd 
+#  each have to be >= 129.  This has about a 1/8000 chance of failing on
+#  random bytes.  This seems to be all that mcvert does.  Unfortunately
+#  we can't also check the checksum because the standard software (Stuffit
+#  Deluxe, etc.) doesn't seem to checksum.
+#  
+#
+    my $buf;
+    my $self = shift;
+    my $file = shift;
+    my $macb = FileHandle->new;
+    $macb->open($file,"r") || croak("Unable to open $file: $!");
+    my $bytes = read($macb,$buf,128);
+    $macb->close;
+    if ($self->{Debug}  && $bytes < 128) {
+	print "is_macbinary only read $bytes header bytes\n";
+    }
+    return 0 unless $bytes == 128;
+    my($zero,
+       $namelength,
+       $filename,
+       $type,
+       $creator,
+       $highflag,
+       $dum1,
+       $dum2,
+       $dum3,
+       $datalength,
+       $reslength,
+       $dum4,
+       $dum5,
+       $dum6,
+       $lowflag,
+       $dum7,
+       $dum8,
+       $version_this,
+       $version_needed,
+       $crc) = unpack("CCA63a4a4CxNnCxNNNNnCx14NnCCN",$buf);
+    if ($self->{Debug}) {
+	print "is_macbinary check bytes: $zero, $namelength, $version_this, $version_needed\n";
+    }
+    if (!$zero && (($namelength -1 )< 63)
+	&& $version_this >= 129 && $version_needed >= 129) {
+	return 1;
+    } else {
+	return 0;
+    }
+}
+
 sub uniqify ($$;$) {
     my ($dir,$name,$ext) = @_;
     my $i;
@@ -678,6 +731,12 @@ with the usual caveat.
 =item C<macb2hex($path)>
 
 The MacBinary II file $path is converted to BinHex.
+
+=item C<is_macbinary($path)>
+
+This routine uses a simple test to find out if a file is a MacBinary or not.
+Returns 1 if it is, 0 otherwise.  This routine can be fooled, but should be
+correct almost all of the time.
 
 =item C<new>
 

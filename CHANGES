@@ -1,3 +1,7 @@
+8/3/99 Version 1.03
+Added is_macbinary().  Changed test.pl to a plain text file to make it 
+easier to maintain under Unix.
+
 7/15/99  Version 1.02
 Fixed stupid 1.01 packaging error.  Put line in Makefile.PL to warn against 
 using this anywhere but MacPerl.  Fixed the comparison routine in test.pl so
@@ -10,3 +14,4 @@ Changed macbinary decoding routines to croak when files smaller than 128
 bytes are fed to them.  Since the header must be 128 bytes in length, the
 file must be corrupt if it doesn't have at least this many bytes.  Added
 two tests to test for this by trying to decode an empty file.
+
