@@ -5,7 +5,7 @@ require Exporter;
 @ISA = qw(Exporter);
 @EXPORT_OK = qw(binhex debinhex macbinary demacbinary hex2macb macb2hex);
 
-$VERSION = "1.01";
+$VERSION = "1.02";
 sub Version { $VERSION; }
 
 use strict;
