@@ -5,7 +5,7 @@ require Exporter;
 @ISA = qw(Exporter);
 @EXPORT_OK = qw(binhex debinhex macbinary demacbinary hex2macb macb2hex is_macbinary);
 
-$VERSION = "1.03";
+$VERSION = "1.04";
 sub Version { $VERSION; }
 
 use strict;
@@ -284,7 +284,8 @@ sub demacbinary {
        $dum8,
        $dum9,
        $dum10,
-       $crc) = unpack("xCA63a4a4CxNnCxNNNNnCx14NnCCN",$buf);
+       $crc) = unpack("xCa63a4a4CxNnCxNNNNnCx14NnCCN",$buf);
+    $filename = substr $filename, 0, $namelength;
     $crc >>= 16;  #the CRC itself is in the first two bytes
     if($self->{Debug}) {
         print "Filename = $filename\nType = $type\nCreator = $creator\n";
@@ -308,19 +309,28 @@ sub demacbinary {
 #  I need to be careful to read a multiple of 128 from the MacBinary file, but
 #  write only what is actually necessary to the native Mac file
 #
-    my $tdatarem = $datalength % 128;
     if($datalength) {
+#
+#  This complexity is here only for speed.  The file could actually be read
+#  128 bytes at a time by the while loop alone.  block_read is used because
+#  of the padding of the MacBinary file.  I don't want to get off a block
+#  boundary, even though most of the time read() should just work.  There's
+#  no guarantee that you get what you ask for with read, though.
+#
         my $datacount = int($datalength/2048);
         for($i = 0;$i < $datacount;$i++) {
-            $n = read($macb,$buf,2048);
-            syswrite($data,$buf,$n);
+            $n = block_read($macb,\$buf,2048);
+            syswrite($data,$buf,$n);  #There should also be a safe_write
             $counter += $n;
             $tdatalength -= $n;
         }
-        my $left = $tdatalength + (128 - $tdatarem);
-        read($macb,$buf,$left);
-        syswrite($data,$buf,$tdatalength);
-        $counter += $tdatalength;
+        while ($tdatalength) {
+	    $n = block_read($macb,\$buf,128);
+	    $n = ($tdatalength > 128) ? 128 : $tdatalength;
+	    syswrite($data,$buf,$n);
+	    $tdatalength -= $n;
+	    $counter += $n;
+	}
     }
     $data->close;
     croak("Data length written $counter != MacBinary data length $datalength")
@@ -494,7 +504,9 @@ sub macb2hex {
        $dum8,
        $dum9,
        $dum10,
-       $crc) = unpack("xCA63a4a4CxNnCxNNNNnCx14NnCCN",$buf);
+       $crc) = unpack("xCa63a4a4CxNnCxNNNNnCx14NnCCN",$buf);
+    $filename = substr $filename, 0, $namelength;
+       
     $crc >>= 16;  #the CRC itself is in the first two bytes
     if($self->{Debug}) {
         print "Filename = $filename\nType = $type\nCreator = $creator\n";
@@ -523,19 +535,27 @@ sub macb2hex {
 #  I need to be careful to read a multiple of 128 from the MacBinary file, but
 #  write only what is actually necessary to the temporary.
 #
-    my $tdatarem = $datalength % 128;
     if($datalength) {
+#
+#  This complexity is here only for speed.  The file could actually be read
+#  128 bytes at a time by the while loop alone.  block_read is used because
+#  of the padding of the MacBinary file.  I don't want to get off a block
+#  boundary.
+#
         my $datacount = int($datalength/2048);
         for($i = 0;$i < $datacount;$i++) {
-            $n = read($macb,$buf,2048);
-            syswrite($tdata,$buf,$n);
+            $n = block_read($macb,\$buf,2048);
+            syswrite($tdata,$buf,$n);  #There should also be a safe_write
             $counter += $n;
             $tdatalength -= $n;
         }
-        my $left = $tdatalength + (128 - $tdatarem);
-        read($macb,$buf,$left);
-        syswrite($tdata,$buf,$tdatalength);
-        $counter += $tdatalength;
+        while ($tdatalength) {
+	    $n = block_read($macb,\$buf,128);
+	    $n = ($tdatalength > 128) ? 128 : $tdatalength;
+	    syswrite($tdata,$buf,$n);
+	    $tdatalength -= $n;
+	    $counter += $n;
+	}
     }
     $tdata->close;
     croak("Data length written $counter != MacBinary data length $datalength")
@@ -660,7 +680,37 @@ sub uniqify ($$;$) {
     return $fullname;
 }
 
+sub block_read {
+#
+#  Make sure that exactly the requested number of bytes gets read from a file,
+#  and no less.  If less get read, it's an error.  MacBinary files are guaranteed
+#  to be padded to 128 byte boundaries, so this prevents any data corruption
+#  if the number of bytes requested are not obtained.
+#
+    my($fh,$buf,$number) = @_;
+    my $n = $number;
+    my $m;
+    
+    $$buf = "";
+    my $buff  = "";
+    my $count = 0;
+    
+    while($n) {
+        $m = read($fh,$buff,$n);
+	croak ("block_read: End of file reached prematurely") unless defined($m);
+	$$buf .= $buff;
+	$n -= $m;
+	$count++;
+	if($count > 100 ) {
+	    croak("block_read: Unable to read exactly $number bytes after 100 tries");
+	}
+    }
+    
+     return $number;
+}
+   
 
+    
 1;
 __END__
 

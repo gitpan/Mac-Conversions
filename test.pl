@@ -7,7 +7,7 @@
 # Change 1..1 below to 1..last_test_to_print .
 # (It may become useful if the test is moved to ./t subdirectory.)
 
-BEGIN { $| = 1; print "1..10\n"; }
+BEGIN { $| = 1; print "1..12\n"; }
 END {print "not ok 1\n" unless $loaded;}
 use Mac::Conversions;
 $loaded = 1;
@@ -21,53 +21,53 @@ print "ok $count\n";
 # (correspondingly "not ok 13") depending on the success of chunk 13
 # of the test code):
 
-if (-e "earthrise.jpg.bin" && ! -e "earthrise.jpg") {
+if (-e ":testfiles:earthrise.jpg.bin" && ! -e ":testfiles:earthrise.jpg") {
     print << "EOBLURB";
-    Before this test can be run, earthrise.jpg.bin must be decoded.
-    Please drop earthrise.jpg.bin onto any MacBinary decoder,
+    Before this test can be run, :testfiles:earthrise.jpg.bin must be decoded.
+    Please drop :testfiles:earthrise.jpg.bin onto any MacBinary decoder,
     for example Stuffit Expander.
 EOBLURB
     exit(0);
 }
 my $cn = Mac::Conversions->new;
 
-$cn->binhex("earthrise.jpg");
-$cn->macbinary("earthrise.jpg");
+$cn->binhex(":testfiles:earthrise.jpg");
+$cn->macbinary(":testfiles:earthrise.jpg");
 
 #Test 2: test invertability of BinHex
-$cn->debinhex("earthrise.jpg.hqx");
-binary_compare("earthrise.jpg","earthrise.jpg.1",++$count);
-unlink("earthrise.jpg.1");
+$cn->debinhex(":testfiles:earthrise.jpg.hqx");
+binary_compare(":testfiles:earthrise.jpg",":testfiles:earthrise.jpg.1",++$count);
+unlink(":testfiles:earthrise.jpg.1");
 
 #Test 3: test invertability of MacBinary II
-$cn->demacbinary("earthrise.jpg.bin");
-binary_compare("earthrise.jpg","earthrise.jpg.1",++$count);
-unlink("earthrise.jpg.1");
+$cn->demacbinary(":testfiles:earthrise.jpg.bin");
+binary_compare(":testfiles:earthrise.jpg",":testfiles:earthrise.jpg.1",++$count);
+unlink(":testfiles:earthrise.jpg.1");
 
 #Test 4: test macb2hex
-$cn->macb2hex("earthrise.jpg.bin");
-$cn->debinhex("earthrise.jpg.1.hqx");
-binary_compare("earthrise.jpg","earthrise.jpg.1",++$count);
-unlink("earthrise.jpg.1.hqx");
-unlink("earthrise.jpg.1");
+$cn->macb2hex(":testfiles:earthrise.jpg.bin");
+$cn->debinhex(":testfiles:earthrise.jpg.1.hqx");
+binary_compare(":testfiles:earthrise.jpg",":testfiles:earthrise.jpg.1",++$count);
+unlink(":testfiles:earthrise.jpg.1.hqx");
+unlink(":testfiles:earthrise.jpg.1");
 
 #Test 5: test hex2macb
-$cn->hex2macb("earthrise.jpg.hqx");
-$cn->demacbinary("earthrise.jpg.1.bin");
-binary_compare("earthrise.jpg","earthrise.jpg.1",++$count);
+$cn->hex2macb(":testfiles:earthrise.jpg.hqx");
+$cn->demacbinary(":testfiles:earthrise.jpg.1.bin");
+binary_compare(":testfiles:earthrise.jpg",":testfiles:earthrise.jpg.1",++$count);
 
 #Test 6, 7: test is_macbinary
-print "not " unless $cn->is_macbinary("earthrise.jpg.bin");
+print "not " unless $cn->is_macbinary(":testfiles:earthrise.jpg.bin");
 print "ok ",++$count,"\n";
 
 print "not " if $cn->is_macbinary("README");
 print "ok ",++$count,"\n";
 
 
-unlink("earthrise.jpg.1.bin");
-unlink("earthrise.jpg.1");
-unlink("earthrise.jpg.bin");
-unlink("earthrise.jpg.hqx");
+unlink(":testfiles:earthrise.jpg.1.bin");
+unlink(":testfiles:earthrise.jpg.1");
+unlink(":testfiles:earthrise.jpg.bin");
+unlink(":testfiles:earthrise.jpg.hqx");
 
 #Tests 8, 9, 10: Make sure that headerless MacBinaries don't make it through
 #First create an empty file
@@ -91,6 +91,43 @@ print "ok ",++$count,"\n";
 
 unlink "empty.bin";
 
+#Tests 11, 12.  Make sure that the MacBinary decoders handle files with
+#whitespace at the end of the name correctly
+rename(":testfiles:earthrise.jpg",":testfiles:earthrise.jpg   ");
+$cn->macbinary(":testfiles:earthrise.jpg   ");
+#Test 11: test invertability of MacBinary II
+$cn->demacbinary(":testfiles:earthrise.jpg   .bin");
+binary_compare(":testfiles:earthrise.jpg   ",":testfiles:earthrise.jpg   .1",++$count);
+unlink(":testfiles:earthrise.jpg   .1");
+#Test 12: same for BinHex
+$cn->macb2hex(":testfiles:earthrise.jpg   .bin");
+$cn->debinhex(":testfiles:earthrise.jpg   .hqx");
+binary_compare(":testfiles:earthrise.jpg   ",":testfiles:earthrise.jpg   .1",++$count);
+
+unlink(":testfiles:earthrise.jpg   .bin");
+unlink(":testfiles:earthrise.jpg   .hqx");
+unlink(":testfiles:earthrise.jpg   .1");
+
+rename(":testfiles:earthrise.jpg   ",":testfiles:earthrise.jpg");
+
+#Test 13: Make sure that a file with a data fork of exactly 128 bytes gets
+#handled properly.  The MacBinary file is named "128.bn" to ensure that it
+#doesn't get decoded by cpan-mac or untargzipme.
+#
+#Unfortunately, this test can't be distributed with Mac::Conversions 1.04 
+#because there's no good way to transmit the original ALFA/TEXT file in a
+#tarball, since previous versions of Mac::Conversions will botch the decoding.
+#The test worked locally, though, with 1.04, and failed with 1.03.  I'll turn
+#it on in the future when Mac::Conversion 1.04 or later is shipped with
+#cpan-mac.
+#
+#rename(":testfiles:128.bn",":testfiles:128.bin");
+#$cn->demacbinary(":testfiles:128.bin");
+#binary_compare(":testfiles:128",":testfiles:128.1",++$count);
+#unlink(":testfiles:128.1");
+#rename(":testfiles:128.bin",":testfiles:128.bn");
+
+
 sub binary_compare {
     use POSIX;
     use Fcntl;
@@ -98,7 +135,7 @@ sub binary_compare {
     my ($orig, $copy, $num) = @_;
     my ($buf, $buf2, $n, $fdorig, $fdcopy);
     
-    if(open(ORIG,"<$orig") and open(COPY,"<$copy")) {
+    if(open(ORIG,"<$orig\0") and open(COPY,"<$copy\0")) {
 	while($n = read(ORIG,$buf,2048)) {
 	    read(COPY,$buf2,$n);
 	    unless ($buf eq $buf2) {

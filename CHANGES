@@ -1,3 +1,14 @@
+10/9/99 Version 1.04
+A serious error in demacbinary and macb2hex pointed out and patched by Mark
+Thompson <mark@moose.tgsoft.com> could cause resource fork corruption.  If
+the length of the data fork was an exact multiple of 128, an extra block
+would be read from the MacBinary file.  Although it wouldn't be written to
+the data fork, it meant that the processing of the resource fork would
+start 128 bytes beyond the actual beginning of the resource fork in the
+MacBinary file.  He also pointed out that if the filename ended with
+whitespace, the space padding used to extract the name from the MacBinary
+header would mean that the original filename couldn't be reconstructed.
+
 8/3/99 Version 1.03
 Added is_macbinary().  Changed test.pl to a plain text file to make it 
 easier to maintain under Unix.
