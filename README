@@ -1,3 +1,8 @@
+If you're not running MacPerl, this module is not for you.  I plan on 
+adding netatalk support in a future release, but until then, this is only 
+useful on MacOS using MacPerl.
+
+
 SYNOPSIS
 
     use Mac::Conversions qw(binhex debinhex macbinary demacbinary macb2hex hex2macb);

@@ -5,7 +5,7 @@ require Exporter;
 @ISA = qw(Exporter);
 @EXPORT_OK = qw(binhex debinhex macbinary demacbinary hex2macb macb2hex);
 
-$VERSION = "1.00";
+$VERSION = "1.01";
 sub Version { $VERSION; }
 
 use strict;
@@ -264,7 +264,8 @@ sub demacbinary {
     my $file = shift or croak("No filename given $!");
     $macb = FileHandle->new;
     $macb->open($file,"r") || croak("Unable to open $file: $!");
-    read($macb,$buf,128);
+    $n = read($macb,$buf,128);
+	croak("Headerless MacBinary file, that shouldn't be!") unless $n == 128;
     my($namelength,
        $filename,
        $type,
@@ -473,7 +474,8 @@ sub macb2hex {
 
     $macb = FileHandle->new;
     $macb->open($file,"r") || croak("Unable to open $file: $!");
-    read($macb,$buf,128);
+    $n = read($macb,$buf,128);
+	croak("Headerless MacBinary file, that shouldn't be!") unless $n == 128;
     my($namelength,
        $filename,
        $type,
